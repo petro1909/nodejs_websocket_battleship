@@ -15,7 +15,7 @@ module.exports = {
     node: true,
     jest: true,
   },
-  ignorePatterns: ['.eslintrc.js'],
+  ignorePatterns: ['.eslintrc.js', '.vscode', 'node_modules', '*.js'],
   rules: {
     "prettier/prettier": [
       "error",
