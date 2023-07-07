@@ -1,28 +1,46 @@
-import { RoomRepository } from 'repository/roomRepository';
-import { createResponseMessage } from 'service/messageService';
-import { resCommandTypes } from 'types/commands/resCommandTypes';
-import { User } from 'types/models/user';
+import { GameService } from '../service/gameService';
+import { WSClientsService } from '../service/clientsService';
+import { RoomService } from '../service/roomService';
+import { resCommandTypes } from '../types/entities/commandTypes';
+import { Client } from '../types/entities/users';
+import { createResponseMessage } from '../util/messageParser';
 
 export class RoomController {
-  private roomRepository: RoomRepository;
-  constructor() {
-    this.roomRepository = RoomRepository.getInstance();
-  }
-  public createRoom(user: User, data: string): string {
-    const createdRoom = this.roomRepository.createRoom(user);
+  private roomService: RoomService;
+  private gameService: GameService;
+  private wsClientsService: WSClientsService;
 
-    const roomData = { idGame: createdRoom.roomId, idPlayer: user.index };
-    const message = createResponseMessage(resCommandTypes.CREATE_GAME, roomData);
-    return message;
+  constructor() {
+    this.roomService = RoomService.getInstance();
+    this.gameService = GameService.getInstance();
+    this.wsClientsService = WSClientsService.getInstance();
   }
-  public addPlayer(user: User, data: string) {
-    const 
-    this.roomRepository.addPlayerToRoom(user, )
+
+  public createRoom(client: Client, data: string) {
+    this.roomService.createRoom(client.user!);
+
+    const roomAnswerData = this.roomService.getRooms();
+    const roomAnswerMessage = createResponseMessage(resCommandTypes.UPDATE_ROOM, roomAnswerData);
+    this.wsClientsService.getClients().forEach((client) => client.wsClient.send(roomAnswerMessage));
   }
-  public getUnplayableRooms() {
-    const rooms = this.roomRepository.getRooms().filter((room) => room.roomUsers.length == 1);
-    const roomsData = { rooms };
-    const message = createResponseMessage(resCommandTypes.UPDATE_ROOM, roomsData);
-    return message;
+
+  public addPlayerToRoom(client: Client, data: string) {
+    const room = this.roomService.addPlayerToRoom(client.user!, data);
+    const createGameAnswer = this.gameService.createGame(room);
+
+    const createrPlayerAnswerData = createGameAnswer[0];
+    const addedPlayerAnswerData = createGameAnswer[1];
+
+    const createrPlayerClient = this.wsClientsService.getClients().find((client) => client.user?.index === createrPlayerAnswerData?.idPlayer);
+    if (createrPlayerClient) {
+      const createrPlayerAnswer = createResponseMessage(resCommandTypes.CREATE_GAME, createrPlayerAnswerData);
+      createrPlayerClient.wsClient.send(createrPlayerAnswer);
+    }
+    const addedPlayerAnswer = createResponseMessage(resCommandTypes.CREATE_GAME, addedPlayerAnswerData);
+    client.wsClient.send(addedPlayerAnswer);
+
+    const roomAnswerData = this.roomService.getRooms();
+    const roomAnswerMessage = createResponseMessage(resCommandTypes.UPDATE_ROOM, roomAnswerData);
+    this.wsClientsService.getClients().forEach((client) => client.wsClient.send(roomAnswerMessage));
   }
 }
