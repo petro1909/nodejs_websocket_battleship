@@ -2,20 +2,20 @@ import { FrameCell, PlayerFrame, FrameShip } from '../types/entities/game';
 import { Ship } from '../types/entities/ship';
 
 export class GameFrameService {
-  public static getEmpyGameFrame(): FrameCell[][] {
+  public static getEmpyGameFrame(): Map<number, Map<number, FrameCell>> {
     const frameLength = 10;
-    const emptyGameFrame: FrameCell[][] = [];
+    const emptyGameFrame = new Map<number, Map<number, FrameCell>>();
     for (let i = 0; i < frameLength; i++) {
-      const emptyGameFrameLine: FrameCell[] = [];
+      const emptyGameFrameLine = new Map<number, FrameCell>();
       for (let j = 0; j < frameLength; j++) {
-        emptyGameFrameLine.push({ shipIndex: -1, occupated: false, hitted: false, status: undefined });
+        emptyGameFrameLine.set(j, { shipIndex: -1, occupated: false, hitted: false, status: undefined });
       }
-      emptyGameFrame.push(emptyGameFrameLine);
+      emptyGameFrame.set(i, emptyGameFrameLine);
     }
     return emptyGameFrame;
   }
 
-  public static fillPlayerFrame(frame: FrameCell[][], ships: Array<Ship>): PlayerFrame {
+  public static fillPlayerFrame(frame: Map<number, Map<number, FrameCell>>, ships: Array<Ship>): PlayerFrame {
     const frameShips: Array<FrameShip> = [];
     const shipsCount = ships.length;
     for (let i = 0; i < shipsCount; i++) {
@@ -26,25 +26,37 @@ export class GameFrameService {
         let cell: FrameCell;
         //Fill game frame depends on ship length and direction
         if (ship.direction) {
-          cell = frame[coordinate.y + j]![coordinate.x] as FrameCell;
+          cell = frame.get(coordinate.y + j)!.get(coordinate.x) as FrameCell;
         } else {
-          cell = frame[coordinate.y]![coordinate.x + j] as FrameCell;
+          cell = frame.get(coordinate.y)!.get(coordinate.x + j) as FrameCell;
         }
         cell.shipIndex = i;
         cell.occupated = true;
+      }
+
+      for (let j = 0; j < ship.length; j++) {
+        let currentX = 0;
+        let currentY = 0;
+        if (ship.direction) {
+          currentX = coordinate.x;
+          currentY = coordinate.y + j;
+        } else {
+          currentX = coordinate.x + j;
+          currentY = coordinate.y;
+        }
         //Remember cells around ship
-        for (let y = coordinate.y - 1; y < coordinate.y + 2; y++) {
-          if (y < 0 || y > frame!.length) continue;
-          for (let x = coordinate.x - 1; x < coordinate.x + 2; x++) {
-            if (x < 0 || x > frame[y]!.length) continue;
-            if (x === coordinate.x && y === coordinate.y) continue;
-            //if ((frame[y]![x] as FrameCell).occupated) continue;
+        for (let y = currentY - 1; y <= currentY + 1; y++) {
+          if (y < 0 || y > 9) continue;
+          for (let x = currentX - 1; x <= currentX + 1; x++) {
+            if (x < 0 || x > 9) continue;
+            if (x === currentX && y === currentY) continue;
+            if ((frame.get(y)!.get(x) as FrameCell).occupated) continue;
             frameShip.cellsAroundShip.push({ x: x, y: y });
           }
         }
-        frameShips.push(frameShip);
       }
+      frameShips.push(frameShip);
     }
-    return { ships: ships, shipsFrame: frameShips, cellsFrame: frame };
+    return { ships: ships, shipsFrame: frameShips, cellsFrame: frame, liveCells: 20 };
   }
 }
