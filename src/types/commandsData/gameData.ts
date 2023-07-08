@@ -14,20 +14,20 @@ export type AttackRequestData = {
   gameId: string;
   x: number;
   y: number;
-  indexPlayer: number;
+  indexPlayer: string;
 };
 
 export type AttackResponseData = {
   position: { x: number; y: number };
   currentPlayer: string;
-  status: 'miss' | 'killed' | 'shot';
+  status?: 'miss' | 'killed' | 'shot';
 };
 
 export type FinishGame = {
   winPlayer: string;
 };
 
-export type RandomAttack = {
+export type RandomAttackRequestData = {
   gameId: string;
   indexPlayer: string;
 };
