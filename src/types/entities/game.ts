@@ -5,12 +5,18 @@ export type Game = {
   gameId: string;
   player1: Player;
   player2: Player;
-  currentPlayerIndex: string;
+  currentTurn: CurrentTurn;
 };
 export type Player = {
   client: Client;
   playerIndex: string;
   frame?: PlayerFrame;
+};
+
+export type CurrentTurn = {
+  isHitted: boolean;
+  isHittedAlreadyHiitedSell: boolean;
+  currentPlayerIndex: string;
 };
 
 export type PlayerFrame = {
