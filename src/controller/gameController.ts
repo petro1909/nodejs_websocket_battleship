@@ -4,7 +4,7 @@ import { Client } from '../types/entities/users';
 import { createResponseMessage } from '../util/messageParser';
 import { resCommandTypes } from '../types/entities/commandTypes';
 import { AttackRequestData, FinishGame, RandomAttackRequestData } from '../types/commandsData/gameData';
-import { Game } from '../types/entities/game';
+import { Bot, Game, Player } from '../types/entities/game';
 import { WinnerService } from '../service/winnerService';
 
 export class GameController {
@@ -14,6 +14,12 @@ export class GameController {
   constructor() {
     this.gameService = GameService.getInstance();
     this.wsClientsService = WSClientsService.getInstance();
+  }
+
+  public createGameWithBot(client: Client, data: string) {
+    const createGameResponseData = this.gameService.createGameWithBot(client);
+    const createGameResponse = createResponseMessage(resCommandTypes.CREATE_GAME, createGameResponseData);
+    client.wsClient.send(createGameResponse);
   }
 
   public addShipsToBoard(client: Client, data: string) {
@@ -28,13 +34,16 @@ export class GameController {
 
       const startGame2ndPlayerData = startGameResponseData[1];
       const startGame2ndPlayerResponse = createResponseMessage(resCommandTypes.START_GAME, startGame2ndPlayerData);
-      game.player2.client.wsClient.send(startGame2ndPlayerResponse);
+      if (!game.isGameWithBot) {
+        const player2Client = game.player2 as Player;
+        player2Client.client.wsClient.send(startGame2ndPlayerResponse);
+      }
 
-      this.nextMove(game, game.gameId);
+      this.nextMove(client, game);
     }
   }
 
-  public attack(clinet: Client, data: string) {
+  public attack(client: Client, data: string) {
     const attackRequestData: AttackRequestData = JSON.parse(data);
 
     const game = this.gameService.getGameById(attackRequestData.gameId);
@@ -43,15 +52,18 @@ export class GameController {
     }
     const attackResponseDataArray = this.gameService.attack(attackRequestData);
     if (!attackResponseDataArray) {
-      this.nextMove(game, game.gameId);
+      this.nextMove(client, game);
       return;
     }
     attackResponseDataArray.forEach((attackResponseData) => {
       const attackResponse = createResponseMessage(resCommandTypes.ATTACK, attackResponseData);
       game.player1.client.wsClient.send(attackResponse);
-      game.player2.client.wsClient.send(attackResponse);
+      if (!game.isGameWithBot) {
+        const player2Client = game.player2 as Player;
+        player2Client.client.wsClient.send(attackResponse);
+      }
     });
-    this.nextMove(game, game.gameId);
+    this.nextMove(client, game);
   }
 
   public randomAttack(client: Client, data: string) {
@@ -63,34 +75,57 @@ export class GameController {
     }
     const attackResponseDataArray = this.gameService.randomAttack(randomAttackRequestData);
     if (!attackResponseDataArray) {
-      this.nextMove(game, game.gameId);
+      this.nextMove(client, game);
       return;
     }
+
     attackResponseDataArray.forEach((attackResponseData) => {
       const attackResponse = createResponseMessage(resCommandTypes.ATTACK, attackResponseData);
       game.player1.client.wsClient.send(attackResponse);
-      game.player2.client.wsClient.send(attackResponse);
+      if (!game.isGameWithBot) {
+        const player2Client = game.player2 as Player;
+        player2Client.client.wsClient.send(attackResponse);
+      }
     });
 
-    this.nextMove(game, game.gameId);
+    this.nextMove(client, game);
   }
 
-  private nextMove(game: Game, gameId: string) {
+  private nextMove(client: Client, game: Game) {
     const gameFinished = this.gameService.gameFinished(game);
     if (!gameFinished) {
-      const turnResponseData = this.gameService.changeTurn(gameId);
+      const turnResponseData = this.gameService.changeTurn(game.gameId);
       const turnResponse = createResponseMessage(resCommandTypes.TURN, turnResponseData);
       game.player1.client.wsClient.send(turnResponse);
-      game.player2.client.wsClient.send(turnResponse);
+      if (!game.isGameWithBot) {
+        const player2Client = game.player2 as Player;
+        player2Client.client.wsClient.send(turnResponse);
+      }
+      if (game.currentTurn.currentPlayerIndex === game.player2.playerIndex) {
+        const randomAttackRequestData: RandomAttackRequestData = { gameId: game.gameId, indexPlayer: game.player2.playerIndex };
+        const randomAttackResponse = JSON.stringify(randomAttackRequestData);
+        setTimeout(() => this.randomAttack(client, randomAttackResponse), 1000);
+      }
     } else {
-      const finishGameResponseData: FinishGame = { winPlayer: gameFinished.playerIndex };
-      const finishGameResponse = createResponseMessage(resCommandTypes.FINISH, finishGameResponseData);
-      game.player1.client.wsClient.send(finishGameResponse);
-      game.player2.client.wsClient.send(finishGameResponse);
-
-      const winnersData = WinnerService.getWinners();
-      const winnersResponse = createResponseMessage(resCommandTypes.UPDATE_WINNERS, winnersData);
-      this.wsClientsService.getClients().forEach((client) => client.wsClient.send(winnersResponse));
+      this.endGame(game);
     }
+  }
+
+  private endGame(game: Game) {
+    const finishGameResponseData: FinishGame = { winPlayer: game.winner!.playerIndex };
+    const finishGameResponse = createResponseMessage(resCommandTypes.FINISH, finishGameResponseData);
+    game.player1.client.wsClient.send(finishGameResponse);
+    if (!game.isGameWithBot) {
+      const player2Client = game.player2 as Player;
+      player2Client.client.wsClient.send(finishGameResponse);
+    } else {
+      const winner = game.winner as Player;
+      if (winner.client) {
+        winner.client.user!.wins += 1;
+      }
+    }
+    const winnersData = WinnerService.getWinners();
+    const winnersResponse = createResponseMessage(resCommandTypes.UPDATE_WINNERS, winnersData);
+    this.wsClientsService.getClients().forEach((client) => client.wsClient.send(winnersResponse));
   }
 }
