@@ -11,4 +11,4 @@ export type User = {
   wins: number;
 };
 
-export type Winner = Omit<User, 'password'>;
+export type Winner = Omit<User, 'password' | 'index'>;
