@@ -4,14 +4,18 @@ import { Client } from './users';
 export type Game = {
   gameId: string;
   player1: Player;
-  player2: Player;
+  player2: Player | Bot;
   currentTurn: CurrentTurn;
+  isGameWithBot: boolean;
+  winner?: Player | Bot;
 };
+
 export type Player = {
   client: Client;
   playerIndex: string;
   frame?: PlayerFrame;
 };
+export type Bot = Omit<Player, 'client'>;
 
 export type CurrentTurn = {
   isHitted: boolean;
