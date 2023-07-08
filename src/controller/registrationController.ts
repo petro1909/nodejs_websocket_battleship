@@ -4,6 +4,7 @@ import { RoomService } from '../service/roomService';
 import { Client } from '../types/entities/users';
 import { resCommandTypes } from '../types/entities/commandTypes';
 import { createResponseMessage } from '../util/messageParser';
+import { WinnerService } from '../service/winnerService';
 
 export class RegistrationController {
   private userService: UserService;
@@ -18,11 +19,17 @@ export class RegistrationController {
 
   public userRegistration(client: Client, data: string) {
     const registrationResponseData = this.userService.userRegistration(client, data);
-    const registrationAnswerMessage: string = createResponseMessage(resCommandTypes.REGISTRATION, registrationResponseData);
-    client.wsClient.send(registrationAnswerMessage);
+    const registrationResponseMessage: string = createResponseMessage(resCommandTypes.REGISTRATION, registrationResponseData);
+    client.wsClient.send(registrationResponseMessage);
 
-    const roomAnswerData = this.roomService.getRooms();
-    const roomAnswerMessage = createResponseMessage(resCommandTypes.UPDATE_ROOM, roomAnswerData);
-    this.wsClientsService.getClients().forEach((client) => client.wsClient.send(roomAnswerMessage));
+    const roomResponseData = this.roomService.getRoomsData();
+    const roomResponseMessage = createResponseMessage(resCommandTypes.UPDATE_ROOM, roomResponseData);
+    const winnersData = WinnerService.getWinners();
+    const winnersResponse = createResponseMessage(resCommandTypes.UPDATE_WINNERS, winnersData);
+
+    this.wsClientsService.getClients().forEach((client) => {
+      client.wsClient.send(roomResponseMessage);
+      client.wsClient.send(winnersResponse);
+    });
   }
 }
