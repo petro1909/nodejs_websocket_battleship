@@ -5,6 +5,7 @@ export enum reqCommandTypes {
   ADD_SHIPS = 'add_ships',
   ATTACK = 'attack',
   RANDOM_ATTACK = 'randomAttack',
+  SINGLE_PLAY = 'single_play',
 }
 
 export enum resCommandTypes {
