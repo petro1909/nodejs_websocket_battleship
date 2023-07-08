@@ -23,7 +23,6 @@ export class WSClientsService {
   }
 
   public createClient(wsClient: WebSocket) {
-    console.log(`connection created ${this.clients.length + 1}`);
     const client: Client = { wsClient: wsClient };
     this.handleClientActions(client);
     this.clients.push(client);
