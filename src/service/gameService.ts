@@ -1,10 +1,11 @@
 import { Room } from '../types/entities/room';
-import { Game, PlayerFrame, Player, Coordinate, FrameCell, FrameShip } from '../types/entities/game';
-import { AttackRequestData, AttackResponseData, CreateGameData, RandomAttackRequestData, StartGameData, Turn } from 'types/commandsData/gameData';
+import { Game, PlayerFrame, Player, Coordinate, FrameCell, FrameShip, Bot } from '../types/entities/game';
+import { AttackRequestData, AttackResponseData, CreateGameData, RandomAttackRequestData, StartGameData, Turn } from '../types/commandsData/gameData';
 import { uuidv4 } from '../util/identification';
 import { GameFrameService } from './gameFrameService';
-import { AddShips } from 'types/commandsData/shipData';
-import { Client, Winner } from 'types/entities/users';
+import { AddShips } from '../types/commandsData/shipData';
+import { Client } from '../types/entities/users';
+
 export class GameService {
   private games: Array<Game> = [];
   private static instance: GameService;
@@ -15,36 +16,62 @@ export class GameService {
     }
     return GameService.instance;
   }
-  public getGameById(gameId: string) {
+  public getGameById(gameId: string): Game {
     const findedGame = this.games.find((game) => game.gameId === gameId) as Game;
     return findedGame;
   }
+
   public createGame(inputRoom: Room): [CreateGameData, CreateGameData] {
     const gameId = uuidv4();
-    const player1Clinet = inputRoom.roomClients[0] as Client;
-    const player2Clinet = inputRoom.roomClients[1] as Client;
-
     const player1Id = uuidv4();
     const player2Id = uuidv4();
 
-    const player1: Player = { client: player1Clinet, playerIndex: player1Id };
-    const player2: Player = { client: player2Clinet, playerIndex: player2Id };
+    const player1: Player = { client: inputRoom.roomClients[0]!, playerIndex: player1Id };
+    const player2: Player = { client: inputRoom.roomClients[1]!, playerIndex: player2Id };
 
-    const game: Game = { gameId: gameId, player1: player1, player2: player2, currentTurn: { isHitted: false, isHittedAlreadyHiitedSell: false, currentPlayerIndex: player1.playerIndex } };
+    const game: Game = {
+      gameId: gameId,
+      player1: player1,
+      player2: player2,
+      currentTurn: { isHitted: false, isHittedAlreadyHiitedSell: false, currentPlayerIndex: player2.playerIndex },
+      isGameWithBot: false,
+    };
     this.games.push(game);
 
-    const player1AnswerData: CreateGameData = { idGame: gameId, idPlayer: player1Id };
-    const player2AnswerData: CreateGameData = { idGame: gameId, idPlayer: player2Id };
+    const player1ResponseData: CreateGameData = { idGame: gameId, idPlayer: player1Id };
+    const player2ResponseData: CreateGameData = { idGame: gameId, idPlayer: player2Id };
+    return [player1ResponseData, player2ResponseData];
+  }
 
-    return [player1AnswerData, player2AnswerData];
+  public createGameWithBot(client: Client): CreateGameData {
+    const gameId = uuidv4();
+    const playerId = uuidv4();
+    const botId = uuidv4();
+    //create players
+    const player: Player = { client: client, playerIndex: playerId };
+    const bot: Bot = { playerIndex: botId };
+    //create bot random player frame
+    const playerFrame: PlayerFrame = GameFrameService.createBotPlayerFrame();
+    bot.frame = playerFrame;
+
+    const game: Game = {
+      gameId: gameId,
+      player1: player,
+      player2: bot,
+      currentTurn: { isHitted: false, isHittedAlreadyHiitedSell: false, currentPlayerIndex: bot.playerIndex },
+      isGameWithBot: true,
+    };
+    this.games.push(game);
+
+    const player1ResponseData: CreateGameData = { idGame: gameId, idPlayer: playerId };
+    return player1ResponseData;
   }
 
   public addShipsToGameFrame(data: string): Game {
     const addShipsCommand: AddShips = JSON.parse(data);
     const game = this.games.find((game) => game.gameId === addShipsCommand.gameId) as Game;
 
-    const cellsFrame = GameFrameService.getEmpyGameFrame();
-    const playerFrame: PlayerFrame = GameFrameService.fillPlayerFrame(cellsFrame, addShipsCommand.ships);
+    const playerFrame: PlayerFrame = GameFrameService.createPlayerFrame(addShipsCommand.ships);
     if (game.player1.playerIndex == addShipsCommand.indexPlayer) {
       game.player1.frame = playerFrame;
     } else {
@@ -55,9 +82,9 @@ export class GameService {
 
   public startGame(gameId: string): [StartGameData, StartGameData] {
     const game = this.games.find((game) => game.gameId === gameId) as Game;
-    const firstPlayerAnswer: StartGameData = { ships: game.player1.frame!.ships, currentPlayerIndex: game.player1.playerIndex };
-    const secondPlayerAnswer: StartGameData = { ships: game.player2.frame!.ships, currentPlayerIndex: game.player2.playerIndex };
-    return [firstPlayerAnswer, secondPlayerAnswer];
+    const firstPlayerResponse: StartGameData = { ships: game.player1.frame!.ships, currentPlayerIndex: game.player1.playerIndex };
+    const secondPlayerResponse: StartGameData = { ships: game.player2.frame!.ships, currentPlayerIndex: game.player2.playerIndex };
+    return [firstPlayerResponse, secondPlayerResponse];
   }
 
   public changeTurn(gameId: string): Turn {
@@ -70,6 +97,24 @@ export class GameService {
       }
     }
     return { currentPlayer: game.currentTurn.currentPlayerIndex };
+  }
+
+  private getPlayers(gameId: string): [Player | Bot, Player | Bot, Game] {
+    const findedGame = this.games.find((game) => game.gameId === gameId) as Game;
+    const attackingPlayer = findedGame.currentTurn.currentPlayerIndex === findedGame.player1.playerIndex ? findedGame.player1 : findedGame.player2;
+    const attackedPlayer = attackingPlayer === findedGame.player1 ? findedGame.player2 : findedGame.player1;
+    return [attackingPlayer, attackedPlayer, findedGame];
+  }
+
+  public gameFinished(game: Game): boolean {
+    const attackingPlayer = this.getPlayers(game.gameId)[0];
+    const attackedPlayer = this.getPlayers(game.gameId)[1];
+    //if end all ships live cells
+    if (attackedPlayer.frame!.liveCells === 0) {
+      game.winner = attackingPlayer;
+      return true;
+    }
+    return false;
   }
 
   public attack(attackRequestData: AttackRequestData): Array<AttackResponseData> | undefined {
@@ -89,12 +134,22 @@ export class GameService {
     const attackedPlayerFrame = attackedPlayer.frame?.cellsFrame as Map<number, Map<number, FrameCell>>;
     const attackedCoordinate = this.getRandomCoordiante(attackedPlayerFrame);
 
-    const attackRequestData: AttackRequestData = { gameId: randomAttackRequestData.gameId, indexPlayer: attackingPlayer.playerIndex, x: attackedCoordinate.x, y: attackedCoordinate.y };
+    const attackRequestData: AttackRequestData = {
+      gameId: randomAttackRequestData.gameId,
+      indexPlayer: attackingPlayer.playerIndex,
+      x: attackedCoordinate.x,
+      y: attackedCoordinate.y,
+    };
 
     return this.checkAttack(attackRequestData, attackingPlayer, attackedPlayer, game);
   }
 
-  private checkAttack(attackRequestData: AttackRequestData, attackingPlayer: Player, attackedPlayer: Player, game: Game): Array<AttackResponseData> | undefined {
+  private checkAttack(
+    attackRequestData: AttackRequestData,
+    attackingPlayer: Player | Bot,
+    attackedPlayer: Player | Bot,
+    game: Game,
+  ): Array<AttackResponseData> | undefined {
     const attackedX = attackRequestData.x;
     const attackedY = attackRequestData.y;
 
@@ -111,6 +166,9 @@ export class GameService {
     game.currentTurn.isHittedAlreadyHiitedSell = false;
     //attackedCell.hitted = true;
     attackedPlayerFrame.get(attackedY)?.delete(attackedX);
+    if (attackedPlayerFrame.get(attackedY)?.size === 0) {
+      attackedPlayerFrame.delete(attackedY);
+    }
     //if miss
     if (!attackedCell.occupated) {
       attackResponseData.status = 'miss';
@@ -134,8 +192,15 @@ export class GameService {
         const cellsAroundShip = attackedPlayerShipFrame.cellsAroundShip;
         const missedAttacksAroundShipResponseData = new Array<AttackResponseData>();
         for (let i = 0; i < cellsAroundShip.length; i++) {
-          const attackResponseData: AttackResponseData = { position: { x: cellsAroundShip[i]!.x, y: cellsAroundShip[i]!.y }, currentPlayer: attackingPlayer.playerIndex, status: 'miss' };
+          const attackResponseData: AttackResponseData = {
+            position: { x: cellsAroundShip[i]!.x, y: cellsAroundShip[i]!.y },
+            currentPlayer: attackingPlayer.playerIndex,
+            status: 'miss',
+          };
           attackedPlayerFrame.get(cellsAroundShip[i]!.y)?.delete(cellsAroundShip[i]!.x);
+          if (attackedPlayerFrame.get(cellsAroundShip[i]!.y)?.size === 0) {
+            attackedPlayerFrame.delete(cellsAroundShip[i]!.y);
+          }
           missedAttacksAroundShipResponseData.push(attackResponseData);
         }
         attackResponseDataArray.push(attackResponseData, ...missedAttacksAroundShipResponseData);
@@ -145,29 +210,14 @@ export class GameService {
   }
 
   private getRandomCoordiante(attackedPlayerFrame: Map<number, Map<number, FrameCell>>): Coordinate {
-    const lines = attackedPlayerFrame.size - 1;
-    const randomMapLine = Math.round(Math.random() * lines);
-    const columnsInLine = attackedPlayerFrame.get(randomMapLine)!.size - 1;
-    const randomMapColumn = Math.round(Math.random() * columnsInLine);
+    const lines = attackedPlayerFrame.size;
+    const randomMapLineNumber = Math.round(Math.random() * (lines - 1));
+    const randomY = Array.from(attackedPlayerFrame.keys())[randomMapLineNumber]!;
 
-    const randomY = Array.from(attackedPlayerFrame.keys())[randomMapLine]!;
-    const randomX = Array.from(attackedPlayerFrame.get(randomY)!.keys())[randomMapColumn]!;
+    const randomLine = attackedPlayerFrame.get(randomY)!;
+    const columnsInLine = randomLine!.size;
+    const randomColumnNumber = Math.round(Math.random() * (columnsInLine - 1));
+    const randomX = Array.from(randomLine.keys())[randomColumnNumber]!;
     return { x: randomX, y: randomY };
-  }
-
-  private getPlayers(gameId: string): [Player, Player, Game] {
-    const findedGame = this.games.find((game) => game.gameId === gameId) as Game;
-    const attackingPlayer = findedGame.currentTurn.currentPlayerIndex === findedGame.player1.playerIndex ? findedGame.player1 : findedGame.player2;
-    const attackedPlayer = attackingPlayer === findedGame.player1 ? findedGame.player2 : findedGame.player1;
-    return [attackingPlayer, attackedPlayer, findedGame];
-  }
-
-  public gameFinished(game: Game): Player | undefined {
-    const attackingPlayer = this.getPlayers(game.gameId)[0];
-    const attackedPlayer = this.getPlayers(game.gameId)[1];
-    if (attackedPlayer.frame!.liveCells === 0) {
-      attackingPlayer.client.user!.wins += 1;
-      return attackingPlayer;
-    }
   }
 }
