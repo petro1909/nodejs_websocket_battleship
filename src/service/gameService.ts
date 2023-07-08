@@ -30,7 +30,7 @@ export class GameService {
     const player1: Player = { client: player1Clinet, playerIndex: player1Id };
     const player2: Player = { client: player2Clinet, playerIndex: player2Id };
 
-    const game: Game = { gameId: gameId, player1: player1, player2: player2, currentPlayerIndex: player1.playerIndex };
+    const game: Game = { gameId: gameId, player1: player1, player2: player2, currentTurn: { isHitted: false, isHittedAlreadyHiitedSell: false, currentPlayerIndex: player1.playerIndex } };
     this.games.push(game);
 
     const player1AnswerData: CreateGameData = { idGame: gameId, idPlayer: player1Id };
@@ -44,7 +44,6 @@ export class GameService {
     const game = this.games.find((game) => game.gameId === addShipsCommand.gameId) as Game;
 
     const cellsFrame = GameFrameService.getEmpyGameFrame();
-    console.log(JSON.stringify(cellsFrame));
     const playerFrame: PlayerFrame = GameFrameService.fillPlayerFrame(cellsFrame, addShipsCommand.ships);
     if (game.player1.playerIndex == addShipsCommand.indexPlayer) {
       game.player1.frame = playerFrame;
@@ -63,35 +62,39 @@ export class GameService {
 
   public changeTurn(gameId: string): Turn {
     const game = this.games.find((game) => game.gameId === gameId) as Game;
-    if (game.currentPlayerIndex == game.player1.playerIndex) {
-      game.currentPlayerIndex = game.player2.playerIndex;
-    } else {
-      game.currentPlayerIndex = game.player1.playerIndex;
+    if (!game.currentTurn.isHitted && !game.currentTurn.isHittedAlreadyHiitedSell) {
+      if (game.currentTurn.currentPlayerIndex == game.player1.playerIndex) {
+        game.currentTurn.currentPlayerIndex = game.player2.playerIndex;
+      } else {
+        game.currentTurn.currentPlayerIndex = game.player1.playerIndex;
+      }
     }
-    return { currentPlayer: game.currentPlayerIndex };
+    return { currentPlayer: game.currentTurn.currentPlayerIndex };
   }
 
   public attack(attackRequestData: AttackRequestData): Array<AttackResponseData> | undefined {
-    const players = this.getPlayers(attackRequestData.gameId);
-    const attackingPlayer = players[0];
-    const attackedPlayer = players[1];
-    return this.checkAttack(attackRequestData, attackingPlayer, attackedPlayer);
+    const gameData = this.getPlayers(attackRequestData.gameId);
+    const attackingPlayer = gameData[0];
+    const attackedPlayer = gameData[1];
+    const game = gameData[2];
+    return this.checkAttack(attackRequestData, attackingPlayer, attackedPlayer, game);
   }
 
   public randomAttack(randomAttackRequestData: RandomAttackRequestData): Array<AttackResponseData> | undefined {
-    const players = this.getPlayers(randomAttackRequestData.gameId);
-    const attackingPlayer = players[0];
-    const attackedPlayer = players[1];
+    const gameData = this.getPlayers(randomAttackRequestData.gameId);
+    const attackingPlayer = gameData[0];
+    const attackedPlayer = gameData[1];
+    const game = gameData[2];
 
     const attackedPlayerFrame = attackedPlayer.frame?.cellsFrame as Map<number, Map<number, FrameCell>>;
     const attackedCoordinate = this.getRandomCoordiante(attackedPlayerFrame);
 
     const attackRequestData: AttackRequestData = { gameId: randomAttackRequestData.gameId, indexPlayer: attackingPlayer.playerIndex, x: attackedCoordinate.x, y: attackedCoordinate.y };
 
-    return this.checkAttack(attackRequestData, attackingPlayer, attackedPlayer);
+    return this.checkAttack(attackRequestData, attackingPlayer, attackedPlayer, game);
   }
 
-  private checkAttack(attackRequestData: AttackRequestData, attackingPlayer: Player, attackedPlayer: Player): Array<AttackResponseData> | undefined {
+  private checkAttack(attackRequestData: AttackRequestData, attackingPlayer: Player, attackedPlayer: Player, game: Game): Array<AttackResponseData> | undefined {
     const attackedX = attackRequestData.x;
     const attackedY = attackRequestData.y;
 
@@ -100,16 +103,18 @@ export class GameService {
 
     const attackedPlayerFrame = attackedPlayer.frame?.cellsFrame as Map<number, Map<number, FrameCell>>;
     const attackedPlayerShipsFrame = attackedPlayer.frame?.shipsFrame as Array<FrameShip>;
-    console.log(JSON.stringify({ line: attackedY, column: attackedX }));
     const attackedCell = attackedPlayerFrame.get(attackedY)!.get(attackedX);
     if (!attackedCell) {
+      game.currentTurn.isHittedAlreadyHiitedSell = true;
       return;
     }
+    game.currentTurn.isHittedAlreadyHiitedSell = false;
     //attackedCell.hitted = true;
     attackedPlayerFrame.get(attackedY)?.delete(attackedX);
     //if miss
     if (!attackedCell.occupated) {
       attackResponseData.status = 'miss';
+      game.currentTurn.isHitted = false;
       attackResponseDataArray.push(attackResponseData);
     } else {
       // if hitt
@@ -117,6 +122,7 @@ export class GameService {
       const attackedPlayerShipFrame = attackedPlayerShipsFrame[shipIndex] as FrameShip;
       --attackedPlayerShipFrame.liveCellsCount;
       --attackedPlayer.frame!.liveCells;
+      game.currentTurn.isHitted = true;
       //if just shot
       if (attackedPlayerShipFrame.liveCellsCount !== 0) {
         attackResponseData.status = 'shot';
@@ -146,16 +152,14 @@ export class GameService {
 
     const randomY = Array.from(attackedPlayerFrame.keys())[randomMapLine]!;
     const randomX = Array.from(attackedPlayerFrame.get(randomY)!.keys())[randomMapColumn]!;
-    console.log(`${lines} ${columnsInLine}`);
-    console.log(`${randomY} ${randomX}`);
     return { x: randomX, y: randomY };
   }
 
-  private getPlayers(gameId: string): [Player, Player] {
+  private getPlayers(gameId: string): [Player, Player, Game] {
     const findedGame = this.games.find((game) => game.gameId === gameId) as Game;
-    const attackingPlayer = findedGame.currentPlayerIndex === findedGame.player1.playerIndex ? findedGame.player1 : findedGame.player2;
+    const attackingPlayer = findedGame.currentTurn.currentPlayerIndex === findedGame.player1.playerIndex ? findedGame.player1 : findedGame.player2;
     const attackedPlayer = attackingPlayer === findedGame.player1 ? findedGame.player2 : findedGame.player1;
-    return [attackingPlayer, attackedPlayer];
+    return [attackingPlayer, attackedPlayer, findedGame];
   }
 
   public gameFinished(game: Game): Player | undefined {

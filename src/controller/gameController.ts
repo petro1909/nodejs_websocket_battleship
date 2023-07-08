@@ -38,13 +38,12 @@ export class GameController {
     const attackRequestData: AttackRequestData = JSON.parse(data);
 
     const game = this.gameService.getGameById(attackRequestData.gameId);
-    if (game.currentPlayerIndex !== attackRequestData.indexPlayer) {
-      const attackResponse = createResponseMessage(resCommandTypes.ATTACK, { message: 'there is not your turn' });
-      clinet.wsClient.send(attackResponse);
+    if (game.currentTurn.currentPlayerIndex !== attackRequestData.indexPlayer) {
       return;
     }
     const attackResponseDataArray = this.gameService.attack(attackRequestData);
     if (!attackResponseDataArray) {
+      this.nextMove(game, game.gameId);
       return;
     }
     attackResponseDataArray.forEach((attackResponseData) => {
@@ -59,11 +58,12 @@ export class GameController {
     const randomAttackRequestData: RandomAttackRequestData = JSON.parse(data);
 
     const game = this.gameService.getGameById(randomAttackRequestData.gameId);
-    if (game.currentPlayerIndex !== randomAttackRequestData.indexPlayer) {
+    if (game.currentTurn.currentPlayerIndex !== randomAttackRequestData.indexPlayer) {
       return;
     }
     const attackResponseDataArray = this.gameService.randomAttack(randomAttackRequestData);
     if (!attackResponseDataArray) {
+      this.nextMove(game, game.gameId);
       return;
     }
     attackResponseDataArray.forEach((attackResponseData) => {
