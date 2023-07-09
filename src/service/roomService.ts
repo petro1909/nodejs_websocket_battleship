@@ -15,6 +15,14 @@ export class RoomService {
     return this.instance;
   }
 
+  public getRooms(): Array<Room> {
+    return this.rooms;
+  }
+
+  public setRooms(newRooms: Array<Room>) {
+    this.rooms = newRooms;
+  }
+
   public getRoomsData(): Array<RoomData> {
     return this.rooms.map((room) => {
       const roomUsers: Array<RoomUser> = [];
