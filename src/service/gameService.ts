@@ -16,6 +16,13 @@ export class GameService {
     }
     return GameService.instance;
   }
+
+  public getGames(): Array<Game> {
+    return this.games;
+  }
+  public removeGame(game: Game) {
+    this.games = this.games.filter((item) => item.gameId !== game.gameId);
+  }
   public getGameById(gameId: string): Game {
     const findedGame = this.games.find((game) => game.gameId === gameId) as Game;
     return findedGame;
