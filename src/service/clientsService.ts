@@ -3,6 +3,7 @@ import { Client } from '../types/entities/users';
 import { parseRequestMessageString } from '../util/messageParser';
 import { RawData, WebSocket } from 'ws';
 import { CommandService } from './commandService';
+import { reqCommandTypes } from '../types/entities/commandTypes';
 
 export class WSClientsService {
   private clients: Array<Client> = [];
@@ -42,9 +43,13 @@ export class WSClientsService {
       disconnectedClient.user!.isOnline = false;
       const indexOfClient = this.clients.indexOf(disconnectedClient);
       this.clients.splice(indexOfClient, 1);
+      const disconnectCommandHandler = this.commands.get(reqCommandTypes.DISCONNECT);
+      if (disconnectCommandHandler) {
+        disconnectCommandHandler(disconnectedClient, '');
+      }
+      console.log(this.clients.length);
+      inputClient.wsClient.terminate();
     }
-    console.log(this.clients.length);
-    inputClient.wsClient.terminate();
   }
 
   private handleClientMessage(client: Client, message: RawData) {

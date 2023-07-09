@@ -22,7 +22,6 @@ export class RoomController {
     const roomResponseData = this.roomService.getRoomsData();
     const roomResponseMessage = createResponseMessage(resCommandTypes.UPDATE_ROOM, roomResponseData);
     this.wsClientsService.getClients().forEach((client) => client.wsClient.send(roomResponseMessage));
-    console.log(roomResponseMessage);
   }
 
   public addPlayerToRoom(addedClient: Client, data: string) {
@@ -40,6 +39,15 @@ export class RoomController {
     const addedPlayerResponseData = createGameResponse[1];
     const addedPlayerResponse = createResponseMessage(resCommandTypes.CREATE_GAME, addedPlayerResponseData);
     addedClient.wsClient.send(addedPlayerResponse);
+
+    const roomResponseData = this.roomService.getRoomsData();
+    const roomResponseMessage = createResponseMessage(resCommandTypes.UPDATE_ROOM, roomResponseData);
+    this.wsClientsService.getClients().forEach((client) => client.wsClient.send(roomResponseMessage));
+  }
+
+  public handleUserDisconnect(client: Client) {
+    const rooms = this.roomService.getRooms();
+    this.roomService.setRooms(rooms.filter((room) => room.roomClients[0] !== client));
 
     const roomResponseData = this.roomService.getRoomsData();
     const roomResponseMessage = createResponseMessage(resCommandTypes.UPDATE_ROOM, roomResponseData);

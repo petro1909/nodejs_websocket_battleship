@@ -100,11 +100,12 @@ export class GameController {
       if (!game.isGameWithBot) {
         const player2Client = game.player2 as Player;
         player2Client.client.wsClient.send(turnResponse);
-      }
-      if (game.currentTurn.currentPlayerIndex === game.player2.playerIndex) {
-        const randomAttackRequestData: RandomAttackRequestData = { gameId: game.gameId, indexPlayer: game.player2.playerIndex };
-        const randomAttackResponse = JSON.stringify(randomAttackRequestData);
-        setTimeout(() => this.randomAttack(client, randomAttackResponse), 1000);
+      } else {
+        if (game.currentTurn.currentPlayerIndex === game.player2.playerIndex) {
+          const randomAttackRequestData: RandomAttackRequestData = { gameId: game.gameId, indexPlayer: game.player2.playerIndex };
+          const randomAttackResponse = JSON.stringify(randomAttackRequestData);
+          setTimeout(() => this.randomAttack(client, randomAttackResponse), 1000);
+        }
       }
     } else {
       this.endGame(game);
@@ -112,14 +113,16 @@ export class GameController {
   }
 
   private endGame(game: Game) {
+    this.gameService.removeGame(game);
     const finishGameResponseData: FinishGame = { winPlayer: game.winner!.playerIndex };
     const finishGameResponse = createResponseMessage(resCommandTypes.FINISH, finishGameResponseData);
     game.player1.client.wsClient.send(finishGameResponse);
+    const winner = game.winner as Player;
     if (!game.isGameWithBot) {
       const player2Client = game.player2 as Player;
       player2Client.client.wsClient.send(finishGameResponse);
+      winner.client.user!.wins += 1;
     } else {
-      const winner = game.winner as Player;
       if (winner.client) {
         winner.client.user!.wins += 1;
       }
@@ -127,5 +130,23 @@ export class GameController {
     const winnersData = WinnerService.getWinners();
     const winnersResponse = createResponseMessage(resCommandTypes.UPDATE_WINNERS, winnersData);
     this.wsClientsService.getClients().forEach((client) => client.wsClient.send(winnersResponse));
+  }
+
+  public handleUserDisconnect(client: Client) {
+    //get all games in what this client is taking part
+    const games = this.gameService.getGames();
+    //handle disconnect for games in what player1 is clinet. With bots or with other player
+    let userGames = games.filter((game) => game.player1.client === client);
+    for (const userGame of userGames) {
+      userGame.winner = userGame.player2;
+      this.endGame(userGame);
+    }
+
+    const gamesWithTwoPlayers = games.filter((game) => !game.isGameWithBot);
+    userGames = gamesWithTwoPlayers.filter((game) => (game.player2 as Player).client === client);
+    for (const userGame of userGames) {
+      userGame.winner = userGame.player1;
+      this.endGame(userGame);
+    }
   }
 }

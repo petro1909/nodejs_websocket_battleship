@@ -24,7 +24,15 @@ export class CommandService {
     this.commandHanlders.set(reqCommandTypes.ADD_SHIPS, this.gameController.addShipsToBoard.bind(this.gameController));
     this.commandHanlders.set(reqCommandTypes.ATTACK, this.gameController.attack.bind(this.gameController));
     this.commandHanlders.set(reqCommandTypes.RANDOM_ATTACK, this.gameController.randomAttack.bind(this.gameController));
+    this.commandHanlders.set(reqCommandTypes.DISCONNECT, this.disconnectHandler.bind(this));
   }
+
+  private disconnectHandler(client: Client, data: string) {
+    console.log('executing disconnect');
+    this.roomController.handleUserDisconnect(client);
+    this.gameController.handleUserDisconnect(client);
+  }
+
   getCommandHandlers() {
     return this.commandHanlders;
   }
