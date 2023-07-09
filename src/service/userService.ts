@@ -18,13 +18,25 @@ export class UserService {
     return this.users;
   }
 
-  public createUser(inputName: string, inputPassword: string): User {
+  private createUser(inputName: string, inputPassword: string): User {
     const existingUser = this.users.find((user) => user.name == inputName);
     if (existingUser) {
-      throw new Error('user with such name already exist');
+      if (existingUser.isOnline) {
+        throw new Error('user with this login is already in system');
+      }
+      if (existingUser.password === inputPassword) {
+        return existingUser;
+      } else {
+        throw new Error('user password is not correct');
+      }
+    }
+    try {
+      this.validateUser(inputName, inputPassword);
+    } catch (err) {
+      throw new Error((err as Error).message);
     }
     const userIndex = uuidv4();
-    const newUser: User = { name: inputName, password: inputPassword, index: userIndex, wins: 0 };
+    const newUser: User = { name: inputName, password: inputPassword, index: userIndex, wins: 0, isOnline: true };
     this.users.push(newUser);
     return newUser;
   }
@@ -40,5 +52,14 @@ export class UserService {
       registrationResponseData = { name: '', index: '', error: true, errorText: (err as Error).message };
     }
     return registrationResponseData;
+  }
+
+  private validateUser(inputName: string, inputPassword: string) {
+    if (inputName.length < 7) {
+      throw new Error('minimum login length 7 characters');
+    }
+    if (inputPassword.length < 7) {
+      throw new Error('minimum password length 7 characters');
+    }
   }
 }
