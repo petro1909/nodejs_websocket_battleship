@@ -22,24 +22,29 @@ export class WSClientsService {
     return this.clients;
   }
 
-  public createClient(wsClient: WebSocket) {
+  public addClient(client: Client) {
+    this.clients.push(client);
+  }
+
+  public connectWsClient(wsClient: WebSocket) {
     const client: Client = { wsClient: wsClient };
     this.handleClientActions(client);
-    this.clients.push(client);
   }
 
   private handleClientActions(client: Client) {
     client.wsClient.on('message', (data: RawData) => this.handleClientMessage(client, data));
-    client.wsClient.on('close', () => this.handleClientDisconnect(client.wsClient));
+    client.wsClient.on('close', () => this.handleClientDisconnect(client));
   }
 
-  private handleClientDisconnect(wsClient: WebSocket) {
-    console.log('disconnect');
-    const disconnectedClient = this.clients.find((client) => client.wsClient == wsClient);
+  private handleClientDisconnect(inputClient: Client) {
+    const disconnectedClient = this.clients.find((client) => client.wsClient == inputClient.wsClient);
     if (disconnectedClient) {
+      disconnectedClient.user!.isOnline = false;
       const indexOfClient = this.clients.indexOf(disconnectedClient);
       this.clients.splice(indexOfClient, 1);
     }
+    console.log(this.clients.length);
+    inputClient.wsClient.terminate();
   }
 
   private handleClientMessage(client: Client, message: RawData) {
