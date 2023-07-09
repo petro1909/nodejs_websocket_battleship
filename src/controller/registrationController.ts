@@ -22,14 +22,15 @@ export class RegistrationController {
     const registrationResponseMessage: string = createResponseMessage(resCommandTypes.REGISTRATION, registrationResponseData);
     client.wsClient.send(registrationResponseMessage);
 
-    const roomResponseData = this.roomService.getRoomsData();
-    const roomResponseMessage = createResponseMessage(resCommandTypes.UPDATE_ROOM, roomResponseData);
-    const winnersData = WinnerService.getWinners();
-    const winnersResponse = createResponseMessage(resCommandTypes.UPDATE_WINNERS, winnersData);
+    if (!registrationResponseData.error) {
+      this.wsClientsService.addClient(client);
+      const roomResponseData = this.roomService.getRoomsData();
+      const roomResponseMessage = createResponseMessage(resCommandTypes.UPDATE_ROOM, roomResponseData);
+      const winnersData = WinnerService.getWinners();
+      const winnersResponse = createResponseMessage(resCommandTypes.UPDATE_WINNERS, winnersData);
 
-    this.wsClientsService.getClients().forEach((client) => {
       client.wsClient.send(roomResponseMessage);
       client.wsClient.send(winnersResponse);
-    });
+    }
   }
 }
