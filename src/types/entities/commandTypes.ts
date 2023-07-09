@@ -6,6 +6,7 @@ export enum reqCommandTypes {
   ATTACK = 'attack',
   RANDOM_ATTACK = 'randomAttack',
   SINGLE_PLAY = 'single_play',
+  DISCONNECT = 'disconnect',
 }
 
 export enum resCommandTypes {
