@@ -9,6 +9,7 @@ export type User = {
   password: string;
   index: string;
   wins: number;
+  isOnline: boolean;
 };
 
-export type Winner = Omit<User, 'password' | 'index'>;
+export type Winner = Omit<User, 'password' | 'index' | 'isOnline'>;
