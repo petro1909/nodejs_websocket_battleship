@@ -3,6 +3,8 @@ import { Message } from '../types/entities/message';
 
 export function createResponseMessage(type: resCommandTypes, data: unknown): string {
   const message: Message = { type: type, data: JSON.stringify(data), id: 0 };
+  console.log('SENDED COMMAND:');
+  console.log(message);
   return JSON.stringify(message);
 }
 
