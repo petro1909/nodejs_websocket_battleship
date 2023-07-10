@@ -57,6 +57,8 @@ export class WSClientsService {
 
   private handleClientMessage(client: Client, message: RawData) {
     const parsedMessage: Message = parseRequestMessageString(message.toString());
+    console.log(`RECEIVED COMMAND:`);
+    console.log(parsedMessage);
     const commandType = parsedMessage.type;
     const commandHandler = this.commands.get(commandType);
     if (!commandHandler) {
