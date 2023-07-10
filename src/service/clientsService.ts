@@ -38,6 +38,7 @@ export class WSClientsService {
   }
 
   private handleClientDisconnect(inputClient: Client) {
+    console.log('executing disconnect...');
     const disconnectedClient = this.clients.find((client) => client.wsClient == inputClient.wsClient);
     if (disconnectedClient) {
       disconnectedClient.user!.isOnline = false;
@@ -47,9 +48,11 @@ export class WSClientsService {
       if (disconnectCommandHandler) {
         disconnectCommandHandler(disconnectedClient, '');
       }
-      console.log(this.clients.length);
-      inputClient.wsClient.terminate();
+      console.log('\x1b[41m%s\x1b[0m', `client ${inputClient.user?.name} disconnected`);
+    } else {
+      console.log('\x1b[41m%s\x1b[0m', `unregistered client disconnected`);
     }
+    inputClient.wsClient.terminate();
   }
 
   private handleClientMessage(client: Client, message: RawData) {
