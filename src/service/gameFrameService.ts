@@ -32,16 +32,21 @@ export class GameFrameService {
     const shipsCount = ships.length;
     for (let i = 0; i < shipsCount; i++) {
       const ship = ships[i] as Ship;
-      const frameShip: FrameShip = { liveCellsCount: ship.length, cellsAroundShip: [] };
+      const frameShip: FrameShip = { shipXP: ship.length, liveShipCells: [], cellsAroundShip: [] };
       const coordinate = ship.position;
       for (let j = 0; j < ship.length; j++) {
-        let cell: FrameCell;
         //Fill game frame depends on ship length and direction
+        let y;
+        let x;
         if (ship.direction) {
-          cell = frame.get(coordinate.y + j)!.get(coordinate.x) as FrameCell;
+          y = coordinate.y + j;
+          x = coordinate.x;
         } else {
-          cell = frame.get(coordinate.y)!.get(coordinate.x + j) as FrameCell;
+          y = coordinate.y;
+          x = coordinate.x + j;
         }
+        const cell = frame.get(y)!.get(x) as FrameCell;
+        frameShip.liveShipCells.push({ x: x, y: y });
         cell.shipIndex = i;
         cell.occupated = true;
       }

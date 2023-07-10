@@ -185,17 +185,24 @@ export class GameService {
       // if hitt
       const shipIndex = attackedCell.shipIndex;
       const attackedPlayerShipFrame = attackedPlayerShipsFrame[shipIndex] as FrameShip;
-      --attackedPlayerShipFrame.liveCellsCount;
+      --attackedPlayerShipFrame.shipXP;
       --attackedPlayer.frame!.liveCells;
       game.currentTurn.isHitted = true;
       //if just shot
-      if (attackedPlayerShipFrame.liveCellsCount !== 0) {
+      if (attackedPlayerShipFrame.shipXP !== 0) {
         attackResponseData.status = 'shot';
         attackResponseDataArray.push(attackResponseData);
       } else {
         //if kill
-        attackResponseData.status = 'killed';
-
+        const shipCells = attackedPlayerShipFrame.liveShipCells;
+        const killedShipCellsResponseData = new Array<AttackResponseData>();
+        for (const shipCell of shipCells) {
+          killedShipCellsResponseData.push({
+            position: { x: shipCell.x, y: shipCell.y },
+            currentPlayer: attackingPlayer.playerIndex,
+            status: 'killed',
+          });
+        }
         const cellsAroundShip = attackedPlayerShipFrame.cellsAroundShip;
         const missedAttacksAroundShipResponseData = new Array<AttackResponseData>();
         for (let i = 0; i < cellsAroundShip.length; i++) {
@@ -210,7 +217,7 @@ export class GameService {
           }
           missedAttacksAroundShipResponseData.push(attackResponseData);
         }
-        attackResponseDataArray.push(attackResponseData, ...missedAttacksAroundShipResponseData);
+        attackResponseDataArray.push(...killedShipCellsResponseData, ...missedAttacksAroundShipResponseData);
       }
     }
     return attackResponseDataArray;

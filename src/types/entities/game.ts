@@ -31,7 +31,8 @@ export type PlayerFrame = {
 };
 
 export type FrameShip = {
-  liveCellsCount: number;
+  shipXP: number;
+  liveShipCells: Array<Coordinate>;
   cellsAroundShip: Array<Coordinate>;
 };
 
