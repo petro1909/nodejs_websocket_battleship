@@ -29,6 +29,13 @@ export class RoomController {
     if (!room) {
       return;
     }
+    //hide all rooms created by this room creator
+    const creatorPlayerRooms = this.roomService.getRooms().filter((item) => item.roomClients[0] === room.roomClients[0]);
+    creatorPlayerRooms.forEach((room) => (room.visible = false));
+    //hide all rooms created by this room added player
+    const addedPlayerRooms = this.roomService.getRooms().filter((item) => item.roomClients[0] === room.roomClients[1]);
+    addedPlayerRooms.forEach((room) => (room.visible = false));
+
     const createGameResponse = this.gameService.createGame(room);
     //send create game Response to creater of room
     const createrPlayerResponseData = createGameResponse[0];

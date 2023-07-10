@@ -6,20 +6,31 @@ import { resCommandTypes } from '../types/entities/commandTypes';
 import { AttackRequestData, FinishGame, RandomAttackRequestData } from '../types/commandsData/gameData';
 import { Bot, Game, Player } from '../types/entities/game';
 import { WinnerService } from '../service/winnerService';
+import { RoomService } from '../service/roomService';
 
 export class GameController {
   private gameService: GameService;
   private wsClientsService: WSClientsService;
+  private roomService: RoomService;
 
   constructor() {
+    this.roomService = RoomService.getInstance();
     this.gameService = GameService.getInstance();
     this.wsClientsService = WSClientsService.getInstance();
   }
 
   public createGameWithBot(client: Client, data: string) {
+    //hide all rooms created by this room creator
+    const creatorPlayerRooms = this.roomService.getRooms().filter((item) => item.roomClients[0] === client);
+    creatorPlayerRooms.forEach((room) => (room.visible = false));
+
     const createGameResponseData = this.gameService.createGameWithBot(client);
     const createGameResponse = createResponseMessage(resCommandTypes.CREATE_GAME, createGameResponseData);
     client.wsClient.send(createGameResponse);
+
+    const roomResponseData = this.roomService.getRoomsData();
+    const roomResponseMessage = createResponseMessage(resCommandTypes.UPDATE_ROOM, roomResponseData);
+    this.wsClientsService.getClients().forEach((client) => client.wsClient.send(roomResponseMessage));
   }
 
   public addShipsToBoard(client: Client, data: string) {
@@ -117,11 +128,18 @@ export class GameController {
     const finishGameResponseData: FinishGame = { winPlayer: game.winner!.playerIndex };
     const finishGameResponse = createResponseMessage(resCommandTypes.FINISH, finishGameResponseData);
     game.player1.client.wsClient.send(finishGameResponse);
+
+    //show all rooms created by this game creator
+    const creatorPlayerRooms = this.roomService.getRooms().filter((room) => room.roomClients[0] === game.player1.client);
+    creatorPlayerRooms.forEach((room) => (room.visible = true));
     const winner = game.winner as Player;
     if (!game.isGameWithBot) {
       const player2Client = game.player2 as Player;
       player2Client.client.wsClient.send(finishGameResponse);
       winner.client.user!.wins += 1;
+      //show all rooms created by this game added player
+      const addedPlayerRooms = this.roomService.getRooms().filter((room) => room.roomClients[0] === player2Client.client);
+      addedPlayerRooms.forEach((room) => (room.visible = true));
     } else {
       if (winner.client) {
         winner.client.user!.wins += 1;
@@ -130,6 +148,10 @@ export class GameController {
     const winnersData = WinnerService.getWinners();
     const winnersResponse = createResponseMessage(resCommandTypes.UPDATE_WINNERS, winnersData);
     this.wsClientsService.getClients().forEach((client) => client.wsClient.send(winnersResponse));
+
+    const roomResponseData = this.roomService.getRoomsData();
+    const roomResponseMessage = createResponseMessage(resCommandTypes.UPDATE_ROOM, roomResponseData);
+    this.wsClientsService.getClients().forEach((client) => client.wsClient.send(roomResponseMessage));
   }
 
   public handleUserDisconnect(client: Client) {

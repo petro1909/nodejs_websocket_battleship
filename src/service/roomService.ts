@@ -24,19 +24,21 @@ export class RoomService {
   }
 
   public getRoomsData(): Array<RoomData> {
-    return this.rooms.map((room) => {
-      const roomUsers: Array<RoomUser> = [];
-      if (room.roomClients[0]) {
-        const roomUser1: RoomUser = { name: room.roomClients[0].user!.name, index: room.roomClients[0].user!.index };
-        roomUsers.push(roomUser1);
-      }
-      if (room.roomClients[1]) {
-        const roomUser2: RoomUser = { name: room.roomClients[1].user!.name, index: room.roomClients[1].user!.index };
-        roomUsers.push(roomUser2);
-      }
-      const roomData: RoomData = { roomId: room.roomId, roomUsers: roomUsers };
-      return roomData;
-    });
+    return this.rooms
+      .filter((room) => room.visible)
+      .map((room) => {
+        const roomUsers: Array<RoomUser> = [];
+        if (room.roomClients[0]) {
+          const roomUser1: RoomUser = { name: room.roomClients[0].user!.name, index: room.roomClients[0].user!.index };
+          roomUsers.push(roomUser1);
+        }
+        if (room.roomClients[1]) {
+          const roomUser2: RoomUser = { name: room.roomClients[1].user!.name, index: room.roomClients[1].user!.index };
+          roomUsers.push(roomUser2);
+        }
+        const roomData: RoomData = { roomId: room.roomId, roomUsers: roomUsers };
+        return roomData;
+      });
   }
 
   public createRoom(creator: Client): void {
@@ -45,7 +47,7 @@ export class RoomService {
     const roomClients: Array<Client> = [];
     roomClients.push(creator);
 
-    const room: Room = { roomId: roomId, roomClients: roomClients };
+    const room: Room = { roomId: roomId, roomClients: roomClients, visible: true };
     this.rooms.push(room);
   }
 
