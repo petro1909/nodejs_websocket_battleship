@@ -28,7 +28,6 @@ export class CommandService {
   }
 
   private disconnectHandler(client: Client, data: string) {
-    console.log('executing disconnect');
     this.roomController.handleUserDisconnect(client);
     this.gameController.handleUserDisconnect(client);
   }
