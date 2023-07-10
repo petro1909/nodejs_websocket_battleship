@@ -1,12 +1,16 @@
-import { WebSocketServer } from 'ws';
+import { AddressInfo, WebSocketServer } from 'ws';
 import { WSClientsService } from '../service/clientsService';
 
 export const websocketServerStart = (wsPort: number) => {
   const clientService = WSClientsService.getInstance();
   clientService.setCommands();
-  console.log(`Start websocket server on the ${wsPort} port!`);
   const server = new WebSocketServer({ port: wsPort });
-  server.on('connection', (wsClient) => {
-    clientService.createClient(wsClient);
+  console.log(`Start websocket server on the ${wsPort} port!`);
+  server.on('connection', (wsClient, request) => {
+    console.log('\x1b[41m%s\x1b[0m', `new client connected on port ${(request.socket.address() as AddressInfo).port}`);
+    clientService.connectWsClient(wsClient);
+  });
+  server.on('close', () => {
+    server.clients.forEach((client) => client.terminate());
   });
 };
