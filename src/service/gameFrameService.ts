@@ -78,18 +78,51 @@ export class GameFrameService {
   }
 
   private static createRandomShipsArray(): Array<Ship> {
+    const randomShipArrayNumber = Math.round(Math.random() * 2);
     const ships: Array<Ship> = [];
-    const ship1: Ship = { position: { x: 3, y: 7 }, direction: false, type: 'huge', length: 4 };
-    const ship2: Ship = { position: { x: 9, y: 3 }, direction: true, type: 'large', length: 3 };
-    const ship3: Ship = { position: { x: 0, y: 3 }, direction: false, type: 'large', length: 3 };
-    const ship4: Ship = { position: { x: 8, y: 0 }, direction: true, type: 'medium', length: 2 };
-    const ship5: Ship = { position: { x: 5, y: 3 }, direction: false, type: 'medium', length: 2 };
-    const ship6: Ship = { position: { x: 2, y: 0 }, direction: true, type: 'medium', length: 2 };
-    const ship7: Ship = { position: { x: 0, y: 0 }, direction: false, type: 'small', length: 1 };
-    const ship8: Ship = { position: { x: 4, y: 0 }, direction: true, type: 'small', length: 1 };
-    const ship9: Ship = { position: { x: 0, y: 8 }, direction: false, type: 'small', length: 1 };
-    const ship10: Ship = { position: { x: 8, y: 8 }, direction: false, type: 'small', length: 1 };
-    ships.push(ship1, ship2, ship3, ship4, ship5, ship6, ship7, ship8, ship9, ship10);
+    let ship1: Ship, ship2: Ship, ship3: Ship, ship4: Ship, ship5: Ship, ship6: Ship, ship7: Ship, ship8: Ship, ship9: Ship, ship10: Ship;
+    console.log(randomShipArrayNumber);
+    switch (randomShipArrayNumber) {
+      case 0:
+        ship1 = { position: { x: 2, y: 3 }, direction: false, type: 'huge', length: 4 };
+        ship2 = { position: { x: 0, y: 5 }, direction: true, type: 'large', length: 3 };
+        ship3 = { position: { x: 3, y: 9 }, direction: false, type: 'large', length: 3 };
+        ship4 = { position: { x: 2, y: 0 }, direction: false, type: 'medium', length: 2 };
+        ship5 = { position: { x: 7, y: 4 }, direction: false, type: 'medium', length: 2 };
+        ship6 = { position: { x: 4, y: 7 }, direction: false, type: 'medium', length: 2 };
+        ship7 = { position: { x: 8, y: 1 }, direction: true, type: 'small', length: 1 };
+        ship8 = { position: { x: 0, y: 3 }, direction: false, type: 'small', length: 1 };
+        ship9 = { position: { x: 7, y: 8 }, direction: false, type: 'small', length: 1 };
+        ship10 = { position: { x: 5, y: 0 }, direction: true, type: 'small', length: 1 };
+        ships.push(ship1, ship2, ship3, ship4, ship5, ship6, ship7, ship8, ship9, ship10);
+        break;
+      case 1:
+        ship1 = { position: { x: 2, y: 5 }, direction: false, type: 'huge', length: 4 };
+        ship2 = { position: { x: 7, y: 6 }, direction: false, type: 'large', length: 3 };
+        ship3 = { position: { x: 8, y: 1 }, direction: true, type: 'large', length: 3 };
+        ship4 = { position: { x: 5, y: 8 }, direction: false, type: 'medium', length: 2 };
+        ship5 = { position: { x: 4, y: 0 }, direction: true, type: 'medium', length: 2 };
+        ship6 = { position: { x: 0, y: 0 }, direction: false, type: 'medium', length: 2 };
+        ship7 = { position: { x: 1, y: 2 }, direction: true, type: 'small', length: 1 };
+        ship8 = { position: { x: 0, y: 7 }, direction: false, type: 'small', length: 1 };
+        ship9 = { position: { x: 2, y: 7 }, direction: true, type: 'small', length: 1 };
+        ship10 = { position: { x: 6, y: 1 }, direction: false, type: 'small', length: 1 };
+        ships.push(ship1, ship2, ship3, ship4, ship5, ship6, ship7, ship8, ship9, ship10);
+        break;
+      default:
+        ship1 = { position: { x: 5, y: 5 }, direction: false, type: 'huge', length: 4 };
+        ship2 = { position: { x: 7, y: 0 }, direction: true, type: 'large', length: 3 };
+        ship3 = { position: { x: 3, y: 8 }, direction: false, type: 'large', length: 3 };
+        ship4 = { position: { x: 1, y: 2 }, direction: true, type: 'medium', length: 2 };
+        ship5 = { position: { x: 0, y: 7 }, direction: false, type: 'medium', length: 2 };
+        ship6 = { position: { x: 8, y: 7 }, direction: true, type: 'medium', length: 2 };
+        ship7 = { position: { x: 9, y: 2 }, direction: true, type: 'small', length: 1 };
+        ship8 = { position: { x: 3, y: 4 }, direction: true, type: 'small', length: 1 };
+        ship9 = { position: { x: 2, y: 0 }, direction: true, type: 'small', length: 1 };
+        ship10 = { position: { x: 5, y: 1 }, direction: true, type: 'small', length: 1 };
+        ships.push(ship1, ship2, ship3, ship4, ship5, ship6, ship7, ship8, ship9, ship10);
+        break;
+    }
     return ships;
   }
 }
