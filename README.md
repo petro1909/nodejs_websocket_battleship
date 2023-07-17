@@ -1,4 +1,4 @@
-# RSSchool NodeJS websocket task template
+# RSSchool NodeJS websocket task
 > Static http server and base task packages. 
 > By default WebSocket client tries to connect to the 3000 port.
 
@@ -29,3 +29,9 @@ Command | Description
 `npm run start` | App served @ `http://localhost:8181` without nodemon
 
 **Note**: replace `npm` with `yarn` in `package.json` if you use yarn.
+
+## Some rules
+1. Registered users store in inmemory database. So after registered user disconnected, login and password still store in database, so after new connect user can login with same login and password. But you can't create several online clients with same login and password
+2. User can create one or more room. If game with this user started, all rooms, created by him is hiding and show only after game is finished.
+3. If player hits already hitted game cell, answer "turn" with same player id is returned 
+4. After user disconnected, all rooms, created by him will be deleted, and, if game with this user is started or on "add_ships" stage, another player will be winner
